@@ -25,7 +25,7 @@ source("icc_functions.R")
 ```
 
 ```{r load_models}
-load("all_manuscript_models_fresh_fit.rda")
+load("all_manuscript_models.rda")
 ```
 
 # Latency post predator cue

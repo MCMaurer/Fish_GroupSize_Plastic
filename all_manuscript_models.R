@@ -258,6 +258,6 @@ chases_fit <- brm(data = chases, family = hurdle_gamma,
 
 save(pred_fit, known_fit, nov_fit, nov_hurdle_fit,
      mean_lat_fit, group_hurdle_fit, chases_fit, 
-     file = "all_manuscript_models_fresh_fit.rda")
+     file = "all_manuscript_models.rda")
 
 

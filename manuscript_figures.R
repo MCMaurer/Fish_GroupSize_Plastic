@@ -11,7 +11,7 @@ panderOptions("table.style", "grid")
 source("figure_generating_functions.R")
 source("icc_functions.R")
 
-load("all_manuscript_models_fresh_fit.rda")
+load("all_manuscript_models.rda")
 
 pnb <- marginal_effects_plot(model = pred_fit, effects = c("treatment", "trial")) +
   xlab("Group size") + ylab("Latency to\nresume movement") + theme(axis.title.y = element_text(angle = 90)) +
