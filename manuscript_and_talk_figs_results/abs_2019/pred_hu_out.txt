@@ -1,0 +1,55 @@
+ Family: hurdle_negbinomial 
+  Links: mu = log; shape = identity; hu = logit 
+Formula: latency ~ 1 + treatment + trial + (1 + treatment + trial | group_ID) + (1 + treatment + trial | tank) 
+         hu ~ 1 + treatment + trial + (1 + treatment + trial | group_ID) + (1 + treatment + trial | tank)
+   Data: d (Number of observations: 1172) 
+Samples: 3 chains, each with iter = 5000; warmup = 1000; thin = 1;
+         total post-warmup samples = 12000
+
+Group-Level Effects: 
+~group_ID (Number of levels: 115) 
+                               Estimate Est.Error l-95% CI u-95% CI Eff.Sample Rhat
+sd(Intercept)                      0.64      0.15     0.33     0.94       3879 1.00
+sd(treatment)                      0.06      0.04     0.00     0.14        990 1.00
+sd(trial)                          0.27      0.07     0.13     0.40       1490 1.00
+sd(hu_Intercept)                   0.78      0.56     0.03     2.06       3677 1.00
+sd(hu_treatment)                   0.22      0.13     0.01     0.50       3146 1.00
+sd(hu_trial)                       0.38      0.25     0.02     0.94       2301 1.00
+cor(Intercept,treatment)          -0.11      0.31    -0.66     0.51       3170 1.00
+cor(Intercept,trial)              -0.31      0.26    -0.71     0.28       1685 1.00
+cor(treatment,trial)              -0.35      0.32    -0.84     0.37       1267 1.00
+cor(hu_Intercept,hu_treatment)    -0.06      0.32    -0.66     0.56       8777 1.00
+cor(hu_Intercept,hu_trial)        -0.06      0.32    -0.65     0.57      11151 1.00
+cor(hu_treatment,hu_trial)        -0.06      0.32    -0.65     0.56       8609 1.00
+
+~tank (Number of levels: 12) 
+                               Estimate Est.Error l-95% CI u-95% CI Eff.Sample Rhat
+sd(Intercept)                      0.23      0.15     0.01     0.60       4038 1.00
+sd(treatment)                      0.04      0.03     0.00     0.13       3295 1.00
+sd(trial)                          0.05      0.04     0.00     0.17       6476 1.00
+sd(hu_Intercept)                   0.94      0.93     0.03     3.30       5728 1.00
+sd(hu_treatment)                   0.36      0.34     0.02     1.25       3021 1.00
+sd(hu_trial)                       0.37      0.30     0.01     1.13       5364 1.00
+cor(Intercept,treatment)          -0.07      0.33    -0.67     0.56      20585 1.00
+cor(Intercept,trial)              -0.09      0.32    -0.68     0.53      18572 1.00
+cor(treatment,trial)              -0.06      0.32    -0.65     0.57      16169 1.00
+cor(hu_Intercept,hu_treatment)    -0.06      0.32    -0.66     0.56      14393 1.00
+cor(hu_Intercept,hu_trial)        -0.04      0.32    -0.63     0.58      19094 1.00
+cor(hu_treatment,hu_trial)        -0.03      0.32    -0.63     0.58      16348 1.00
+
+Population-Level Effects: 
+             Estimate Est.Error l-95% CI u-95% CI Eff.Sample Rhat
+Intercept        3.57      0.26     3.07     4.12       9348 1.00
+hu_Intercept    -4.47      1.64    -8.17    -1.66       6602 1.00
+treatment       -0.12      0.05    -0.24    -0.02       5355 1.00
+trial           -0.13      0.05    -0.24    -0.02      13197 1.00
+hu_treatment    -0.29      0.40    -0.96     0.70       4203 1.00
+hu_trial         0.80      0.36     0.07     1.49       6625 1.00
+
+Family Specific Parameters: 
+      Estimate Est.Error l-95% CI u-95% CI Eff.Sample Rhat
+shape     1.45      0.09     1.29     1.63       9568 1.00
+
+Samples were drawn using sampling(NUTS). For each parameter, Eff.Sample 
+is a crude measure of effective sample size, and Rhat is the potential 
+scale reduction factor on split chains (at convergence, Rhat = 1).

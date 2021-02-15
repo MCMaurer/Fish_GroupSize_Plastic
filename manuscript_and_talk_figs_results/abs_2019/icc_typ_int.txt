@@ -1,0 +1,15 @@
+
+# Random Effect Variances and ICC
+
+Family: hurdle_negbinomial (log)
+Conditioned on: ~(1 | group_ID)
+
+## Variance Ratio (comparable to ICC)
+Ratio: 0.70  HDI 89%: [0.47 0.90]
+
+## Variances of Posterior Predicted Distribution
+Conditioned on fixed effects:  591.88  HDI 89%: [267.62  995.61]
+Conditioned on rand. effects: 1981.18  HDI 89%: [683.19 3902.78]
+
+## Difference in Variances
+Difference: 1350.94  HDI 89%: [207.02 3121.13]

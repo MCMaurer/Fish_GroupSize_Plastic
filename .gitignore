@@ -1,0 +1,12 @@
+.RData
+.Rhistory
+.Rproj.user
+.Ruserdata
+*.rds
+*.rda
+*.pdf
+*.tiff
+*.jpg
+*_files/
+*_cache/
+.DS_Store

@@ -1,0 +1,999 @@
+---
+title: "Ch. 1 Appendix"
+author: "Lea Pollack and Michael Culshaw-Maurer"
+date: "`r format(Sys.time(), '%d %B, %Y')`"
+output: 
+  word_document:
+    reference_docx: style_document_4.docx
+---
+
+```{r, setup, include=F}
+knitr::opts_chunk$set(echo = F, cache = F, warning = F, message = F, dpi = 300, fig.width = 6, fig.height = 5)
+
+library(tidyverse)
+library(brms)
+library(tidybayes)
+library(kableExtra)
+library(knitr)
+library(pander)
+library(emmeans)
+library(patchwork)
+theme_set(theme_minimal())
+panderOptions("table.style", "grid")
+source("figure_generating_functions.R")
+source("icc_functions.R")
+```
+
+```{r load_models}
+load("all_manuscript_models_fresh_fit.rda")
+```
+
+# Latency post predator cue
+
+## Model description
+```{r}
+pred_fit$formula
+pred_fit$family
+```
+
+## Marginal effects plots
+
+```{r, pred_fit marginal effects, out.width=800, out.height=400, fig.width=8, fig.height=4}
+marginal_effects_plot(model = pred_fit, effects = c("treatment", "trial")) +
+  xlab("Group size") + ylab("Latency to resume movement") + theme(axis.title.y = element_text(angle = 90))
+marginal_effects_plot(model = pred_fit, effects = c("treatment", "trial"), dpar = "hu") +
+  xlab("Group size") + ylab("Probability of resuming movement") + theme(axis.title.y = element_text(angle = 90))
+```
+
+## ICC table
+
+```{r pred_fit ICC table}
+my_icc_tibble(pred_fit, total_re.form = ~(1|group_ID) + (1|tank), lesser_re.form = ~(1|tank), hurdle_sep = T) %>% pander(justify = "left")
+```
+
+## Parameter table
+
+```{r, pred_fit coefficient table}
+pred_fit %>% 
+  gather_draws(`^b.*`, shape, `^cor.*`, regex = T) %>% 
+  median_hdi() %>% 
+  select(.variable, .value, .lower, .upper) %>% 
+  rename(variable = .variable, median = .value, hdi_2.5 = .lower, hdi_97.5 = .upper) %>% 
+  mutate(overlap_zero = hdi_2.5 < 0 & hdi_97.5 > 0) %>%
+  pander(justify = "left")
+```
+
+
+# Latency known food
+
+## Model description
+```{r}
+known_fit$formula
+known_fit$family
+```
+
+## Marginal effects plots
+
+```{r, known_fit marginal effects, out.width=800, out.height=400, fig.width=8, fig.height=4}
+marginal_effects_plot(model = known_fit, effects = c("treatment", "trial")) +
+  xlab("Group size") + ylab("Latency to sample kown food") + theme(axis.title.y = element_text(angle = 90))
+marginal_effects_plot(model = known_fit, effects = c("treatment", "trial"), dpar = "hu") +
+  xlab("Group size") + ylab("Probability of sampling known food") + theme(axis.title.y = element_text(angle = 90))
+```
+
+## ICC table
+
+```{r known_fit ICC table}
+my_icc_tibble(known_fit, total_re.form = ~(1|group_ID) + (1|tank), lesser_re.form = ~(1|tank), hurdle_sep = T) %>% pander(justify = "left")
+```
+
+## Parameter table
+
+```{r, known_fit coefficient table}
+known_fit %>% 
+  gather_draws(`^b.*`, shape, `^cor.*`, regex = T) %>% 
+  median_hdi() %>% 
+  select(.variable, .value, .lower, .upper) %>% 
+  rename(variable = .variable, median = .value, hdi_2.5 = .lower, hdi_97.5 = .upper) %>% 
+  mutate(overlap_zero = hdi_2.5 < 0 & hdi_97.5 > 0) %>%
+  pander(justify = "left")
+```
+
+
+# Latency novel food
+
+## Model description
+```{r}
+nov_fit$formula
+nov_fit$family
+```
+
+## Marginal effects plots
+
+```{r, nov_fit marginal effects, out.width=800, out.height=400, fig.width=8, fig.height=4}
+marginal_effects_plot(model = nov_fit, effects = c("treatment", "novel_food")) +
+  xlab("Group size") + ylab("Latency to sample novel food") + theme(axis.title.y = element_text(angle = 90)) +
+  scale_color_viridis_d("Novel\nFood", labels = c("Brine\nShrimp", "Glass\nBead", "Micro-\nplastic")) +
+  scale_fill_viridis_d("Novel\nFood", labels = c("Brine\nShrimp", "Glass\nBead", "Micro-\nplastic")) +
+  theme(legend.key.height = unit(1.2, "cm"))
+marginal_effects_plot(model = nov_fit, effects = c("treatment", "novel_food"), dpar = "hu") +
+  xlab("Group size") + ylab("Probability of sampling novel food") + theme(axis.title.y = element_text(angle = 90)) +
+  scale_color_viridis_d("Novel\nFood", labels = c("Brine\nShrimp", "Glass\nBead", "Micro-\nplastic")) +
+  scale_fill_viridis_d("Novel\nFood", labels = c("Brine\nShrimp", "Glass\nBead", "Micro-\nplastic")) +
+  theme(legend.key.height = unit(1.2, "cm"))
+```
+
+## Pairwise contrast tables
+
+### Latency
+```{r}
+nov_fit %>%
+  emmeans(~novel_food) %>%
+  contrast(method = "pairwise") %>%
+  gather_emmeans_draws() %>%
+  mutate(contrast = str_replace_all(contrast, "-", "/")) %>%
+  mutate(.value = exp(.value)) %>%
+  median_hdi() %>%
+  rename("Median Odds Ratio" = .value,
+         "2.5% CI" = .lower,
+         "97.5% CI" = .upper) %>% 
+  select(-.width, -.point, -.interval) %>% 
+  mutate(`Overlaps 1` = `2.5% CI` < 1 & `97.5% CI` > 1) %>% 
+  pander(justify = "left")
+
+# fitted_contrasts(nov_fit, by = novel_food) %>% 
+#   median_hdi() %>%
+#   rename("Median Difference" = .value,
+#          "2.5% CI" = .lower,
+#          "97.5% CI" = .upper) %>% 
+#   select(-.width, -.point, -.interval) %>% 
+#   mutate(`Overlaps 0` = `2.5% CI` < 10 & `97.5% CI` > 0) %>% 
+#   pander(justify = "left")
+# 
+# fitted_contrasts(nov_fit, by = novel_food, plot = T)
+```
+
+### Hurdle
+```{r}
+
+nov_hurdle_fit %>%
+  emmeans(~novel_food) %>%
+  contrast(method = "pairwise") %>%
+  gather_emmeans_draws() %>%
+  mutate(contrast = str_replace_all(contrast, "-", "/")) %>%
+  mutate(.value = exp(.value)) %>%
+  median_hdi() %>%
+  rename("Median Odds Ratio" = .value,
+         "2.5% CI" = .lower,
+         "97.5% CI" = .upper) %>% 
+  select(-.width, -.point, -.interval) %>% 
+  mutate(`Overlaps 1` = `2.5% CI` < 1 & `97.5% CI` > 1) %>% 
+  pander(justify = "left")
+
+```
+
+## ICC table
+
+```{r nov_fit ICC table}
+my_icc_tibble(nov_fit, total_re.form = ~(1|group_ID) + (1|tank), lesser_re.form = ~(1|tank), hurdle_sep = T) %>% pander(justify = "left")
+```
+
+## Parameter table
+
+```{r, nov_fit coefficient table}
+nov_fit %>% 
+  gather_draws(`^b.*`, shape, `^cor.*`, regex = T) %>% 
+  median_hdi() %>% 
+  select(.variable, .value, .lower, .upper) %>% 
+  rename(variable = .variable, median = .value, hdi_2.5 = .lower, hdi_97.5 = .upper) %>% 
+  mutate(overlap_zero = hdi_2.5 < 0 & hdi_97.5 > 0) %>%
+  pander(justify = "left")
+```
+
+
+<!-- # Mean Group Novel Latency -->
+
+<!-- ## Model description -->
+<!-- ```{r} -->
+<!-- # updated with old model, not a hurdle model. hurdle doesn't work for mean, because one 0 in a group messes up the mean -->
+<!-- mean_nov_fit <- read_rds("other_models/fit_models/mean_group_lat_all_assays_noncentered_fitted.rds") -->
+<!-- mean_nov_fit$formula -->
+<!-- mean_nov_fit$family -->
+<!-- ``` -->
+
+<!-- ## Parameter table -->
+<!-- ```{r} -->
+<!-- mean_nov_fit %>%  -->
+<!--   gather_draws(`^b.*`, shape, regex = T) %>%  -->
+<!--   median_hdi() %>%  -->
+<!--   select(.variable, .value, .lower, .upper) %>%  -->
+<!--   rename(variable = .variable, median = .value, hdi_2.5 = .lower, hdi_97.5 = .upper) %>%  -->
+<!--   mutate(overlap_zero = hdi_2.5 < 0 & hdi_97.5 > 0) %>% -->
+<!--   pander(justify = "left") -->
+<!-- ``` -->
+
+<!-- ## ICC table -->
+
+<!-- ```{r} -->
+<!-- my_icc_tibble(mean_nov_fit, total_re.form = ~(1|group_ID) + (1|tank), lesser_re.form = ~(1|tank)) %>% pander(justify = "left") -->
+<!-- ``` -->
+
+
+# Mean Group Multivariate Model
+
+## Model description
+```{r}
+# updated with old model, not a hurdle model. hurdle doesn't work for mean, because one 0 in a group messes up the mean
+mean_lat_fit$formula
+mean_lat_fit$family
+```
+
+## Beta parameter table
+```{r}
+mean_lat_fit %>% 
+  gather_draws(`^b.*`, regex = T) %>% 
+  median_hdi() %>% 
+  select(.variable, .value, .lower, .upper) %>% 
+  rename(variable = .variable, median = .value, hdi_2.5 = .lower, hdi_97.5 = .upper) %>% 
+  mutate(overlap_zero = hdi_2.5 < 0 & hdi_97.5 > 0) %>%
+  pander(justify = "left")
+```
+
+## Full parameter table
+
+```{r}
+mean_lat_fit %>% 
+  gather_draws(`^b.*`, `^sd.*`, `^cor.*`, `^shape.*`, regex = T) %>% 
+  median_hdi() %>% 
+  select(.variable, .value, .lower, .upper) %>% 
+  rename(variable = .variable, median = .value, hdi_2.5 = .lower, hdi_97.5 = .upper) %>% 
+  pander(justify = "left")
+```
+
+
+<!-- ## Residual correlation between multivariate outcomes -->
+
+<!-- Here we use a posterior prediction approach, using the model to generate predicted outcomes for each outcome variable, then measuring the correlation between the predicted outcomes. -->
+
+<!-- ```{r} -->
+<!-- multipp <- posterior_predict(mean_lat_fit) -->
+
+<!-- cor_matrix_samples <- array(NA_real_, c(dim(multipp)[1], 3, 3)) -->
+
+<!-- for(s in 1:dim(multipp)[1]) { -->
+<!--   cor_matrix_samples[s, ,] <- cor(multipp[s,,]) -->
+<!-- } -->
+<!-- cors <- tibble(nov_known = cor_matrix_samples[,1,2],  -->
+<!--                nov_pred = cor_matrix_samples[,1,3],  -->
+<!--                known_pred = cor_matrix_samples[,2,3]) %>%  -->
+<!--   pivot_longer(cols = everything()) -->
+
+<!-- cors %>%  -->
+<!--   ggplot(aes(x = value, y = name)) + -->
+<!--   tidybayes::geom_halfeyeh() + -->
+<!--   xlab("Correlation between multivariate outcomes") + -->
+<!--   ylab("Outcome pair") -->
+<!-- ``` -->
+
+
+## ICC table
+
+Now we present a separate ICC estimate for each outcome.
+
+```{r}
+my_icc_tibble(mean_lat_fit, total_re.form = ~(1|group_ID) + (1|tank), 
+              lesser_re.form = ~(1|tank)) %>% 
+  pander(justify = "left")
+```
+
+
+
+
+
+# Hurdle Group Multivariate Model
+
+## Model description
+```{r}
+group_hurdle_fit$formula
+group_hurdle_fit$family
+```
+
+## Beta parameter table
+```{r}
+group_hurdle_fit %>% 
+  gather_draws(`^b.*`, regex = T) %>% 
+  median_hdi() %>% 
+  select(.variable, .value, .lower, .upper) %>% 
+  rename(variable = .variable, median = .value, hdi_2.5 = .lower, hdi_97.5 = .upper) %>% 
+  mutate(overlap_zero = hdi_2.5 < 0 & hdi_97.5 > 0) %>%
+  pander(justify = "left")
+```
+
+## Full parameter table
+
+```{r}
+group_hurdle_fit %>% 
+  gather_draws(`^b.*`, `^sd.*`, `^cor.*`, regex = T) %>% 
+  median_hdi() %>% 
+  select(.variable, .value, .lower, .upper) %>% 
+  rename(variable = .variable, median = .value, hdi_2.5 = .lower, hdi_97.5 = .upper) %>% 
+  mutate(overlap_zero = hdi_2.5 < 0 & hdi_97.5 > 0) %>%
+  pander(justify = "left")
+```
+
+<!-- ## Residual correlation between multivariate outcomes -->
+<!-- ```{r} -->
+<!-- multipp <- posterior_predict(group_hurdle_fit) -->
+
+<!-- cor_matrix_samples <- array(NA_real_, c(dim(multipp)[1], 3, 3)) -->
+
+<!-- for(s in 1:dim(multipp)[1]) { -->
+<!--   cor_matrix_samples[s, ,] <- cor(multipp[s,,]) -->
+<!-- } -->
+<!-- cors <- tibble(nov_known = cor_matrix_samples[,1,2],  -->
+<!--                nov_pred = cor_matrix_samples[,1,3],  -->
+<!--                known_pred = cor_matrix_samples[,2,3]) %>%  -->
+<!--   pivot_longer(cols = everything()) -->
+
+<!-- cors %>%  -->
+<!--   ggplot(aes(x = value, y = name)) + -->
+<!--   tidybayes::geom_halfeyeh() + -->
+<!--   xlab("Correlation between multivariate outcomes") + -->
+<!--   ylab("Outcome pair") -->
+<!-- ``` -->
+
+## ICC table
+
+```{r}
+my_icc_tibble(group_hurdle_fit, total_re.form = ~(1|group_ID) + (1|tank), 
+              lesser_re.form = ~(1|tank)) %>% 
+  pander(justify = "left")
+```
+
+# Per-Capita Chases
+
+## Model description
+```{r}
+chases_fit$formula
+chases_fit$family
+```
+
+## Marginal effects plots
+```{r}
+marginal_effects_plot(model = chases_fit, effects = c("trial", "assay")) +
+  xlab("Trial") + ylab("Per-capita chases") + theme(axis.title.y = element_text(angle = 90)) +
+  scale_color_viridis_d(option = "A", end = 0.9) +
+  scale_fill_viridis_d(option = "A", end = 0.9)
+marginal_effects_plot(model = chases_fit, effects = c("trial", "assay"), dpar = "hu") +
+  xlab("Trial") + ylab("Probability of any chases occurring") + theme(axis.title.y = element_text(angle = 90)) +
+  scale_color_viridis_d(option = "A", end = 0.9) +
+  scale_fill_viridis_d(option = "A", end = 0.9)
+
+marginal_effects_plot(model = chases_fit, effects = c("treatment", "assay")) +
+  xlab("Group size") + ylab("Per-capita chases") + theme(axis.title.y = element_text(angle = 90)) + labs(fill = "Assay", color = "Assay") +
+  scale_color_viridis_d(option = "A", end = 0.9) +
+  scale_fill_viridis_d(option = "A", end = 0.9)
+marginal_effects_plot(model = chases_fit, effects = c("treatment", "assay"), dpar = "hu") +
+  xlab("Group size") + ylab("Probability of any chases occurring") + theme(axis.title.y = element_text(angle = 90)) + labs(fill = "Assay", color = "Assay") +
+  scale_color_viridis_d(option = "A", end = 0.9) +
+  scale_fill_viridis_d(option = "A", end = 0.9)
+
+```
+
+```{r}
+chases_fit %>% 
+  gather_draws(`^b.*`, shape, `^cor.*`, regex = T) %>% 
+  median_hdi() %>% 
+  select(.variable, .value, .lower, .upper) %>% 
+  rename(variable = .variable, median = .value, hdi_2.5 = .lower, hdi_97.5 = .upper) %>% 
+  mutate(overlap_zero = hdi_2.5 < 0 & hdi_97.5 > 0) %>%
+  pander(justify = "left")
+```
+
+# Other data/models for appendix:
+
+## Random sampling plots
+
+In order to confirm that group-size effect patterns we observed were not purely due to sampling (i.e., larger groups containing more fast individuals, not just one fast individual that acts as a keystone), we randomly sampled 100 individuals from each treatment (group size), regardless of group ID, and plotted the distributions of latency values. We repeated this process 100 times to identify the range of possible latency distributions for each group size treatment. If treatment had no effect other than non-randomly organizing individuals into groups, the distributions for each group size should be the same. To demonstrate what this would look like, we sampled individuals from the entire population (regardless of treatment group), randomly assigned them treatments, and plotted their latency distributions in the same fashion. These are presented in paired plots for each assay. We also present similar plots, but showing the number of fish per random sample that did not move during the assay, using violin plots instead of distributions of latency values.
+
+```{r}
+latency_typical_food <- readRDS("latency/data/cleaned/latency_typical_food.rds")
+latency_novel_food <- readRDS("latency/data/cleaned/latency_novel_food.rds")
+latency_pred_cue <- readRDS("latency/data/cleaned/latency_pred_cue_final.rds")
+```
+
+```{r}
+resample_lat <- name <- function(rep, data, samples = 100) {
+  data %>% 
+    group_by(treatment) %>% 
+    slice_sample(n = samples) %>% 
+    mutate(replicate = rep)
+}
+
+resample_lat_no_treatment <- name <- function(rep, data, samples = 300) {
+  data %>% 
+    select(-treatment) %>% 
+    slice_sample(n = samples) %>% 
+    mutate(replicate = rep) %>% 
+    mutate(treatment = sample(c(2,4,8), size = samples, replace = T))
+}
+```
+
+### Predator Cue
+
+```{r}
+d <- map_dfr(.x = 1:100, .f = resample_lat, data = latency_pred_cue %>% filter(!is.na(latency)))
+dng <- map_dfr(.x = 1:100, .f = resample_lat_no_treatment, data = latency_pred_cue %>% filter(!is.na(latency)))
+
+d <- bind_rows("With Group Size" = d, "Without Group Size" = dng, .id = "Type of Resampling")
+
+d %>% 
+  ggplot(aes(x = latency, color = factor(treatment), group = interaction(treatment, replicate))) +
+  geom_line(stat = "density", alpha = 0.1) +
+  scale_color_viridis_d("individuals\nrandomly\nsampled from\n groups of:", 
+                        option = "C", end = 0.9) +
+  guides(color = guide_legend(override.aes = list(alpha=1))) +
+  MCMsBasics::minimal_ggplot_theme() +
+  scale_x_log10() +
+  theme(legend.position = c(0.9, 0.9)) +
+  xlab("Latency to move") +
+  facet_grid(rows = vars(`Type of Resampling`))
+
+d %>% 
+  filter(latency == 0) %>% 
+  count(treatment, replicate, `Type of Resampling`) %>% 
+  ggplot(aes(x = factor(treatment), y = n, color = factor(treatment))) +
+  geom_violin(fill = NA) +
+  geom_jitter(height = 0) +
+  scale_color_viridis_d(option = "C", end = 0.9) +
+  theme(legend.position = "none") +
+  labs(x = "Group size", y = "Number of fish that never moved") +
+  facet_grid(rows = vars(`Type of Resampling`))
+```
+
+### Known Food
+
+```{r}
+d <- map_dfr(.x = 1:100, .f = resample_lat, data = latency_typical_food %>% filter(!is.na(latency)))
+dng <- map_dfr(.x = 1:100, .f = resample_lat_no_treatment, data = latency_typical_food %>% filter(!is.na(latency)))
+
+d <- bind_rows("With Group Size" = d, "Without Group Size" = dng, .id = "Type of Resampling")
+
+d %>% 
+  ggplot(aes(x = latency, color = factor(treatment), group = interaction(treatment, replicate))) +
+  geom_line(stat = "density", alpha = 0.1) +
+  scale_color_viridis_d("individuals\nrandomly\nsampled from\n groups of:", 
+                        option = "C", end = 0.9) +
+  guides(color = guide_legend(override.aes = list(alpha=1))) +
+  MCMsBasics::minimal_ggplot_theme() +
+  scale_x_log10() +
+  theme(legend.position = c(0.9, 0.9)) +
+  xlab("Latency to eat") +
+  facet_grid(rows = vars(`Type of Resampling`))
+
+d %>% 
+  filter(latency == 0) %>% 
+  count(treatment, replicate, `Type of Resampling`) %>% 
+  ggplot(aes(x = factor(treatment), y = n, color = factor(treatment))) +
+  geom_violin(fill = NA) +
+  geom_jitter(height = 0) +
+  scale_color_viridis_d(option = "C", end = 0.9) +
+  theme(legend.position = "none") +
+  labs(x = "Group size", y = "Number of fish that never ate") +
+  facet_grid(rows = vars(`Type of Resampling`))
+```
+
+### Novel Food
+
+```{r}
+d <- map_dfr(.x = 1:100, .f = resample_lat, data = latency_novel_food %>% filter(!is.na(latency)))
+dng <- map_dfr(.x = 1:100, .f = resample_lat_no_treatment, data = latency_novel_food %>% filter(!is.na(latency)))
+
+d <- bind_rows("With Group Size" = d, "Without Group Size" = dng, .id = "Type of Resampling")
+
+d %>% 
+  ggplot(aes(x = latency, color = factor(treatment), group = interaction(treatment, replicate))) +
+  geom_line(stat = "density", alpha = 0.1) +
+  scale_color_viridis_d("individuals\nrandomly\nsampled from\n groups of:", 
+                        option = "C", end = 0.9) +
+  guides(color = guide_legend(override.aes = list(alpha=1))) +
+  MCMsBasics::minimal_ggplot_theme() +
+  scale_x_log10() +
+  theme(legend.position = c(0.9, 0.9)) +
+  xlab("Latency to eat") +
+  facet_grid(rows = vars(`Type of Resampling`))
+
+d %>% 
+  filter(latency == 0) %>% 
+  count(treatment, replicate, `Type of Resampling`) %>% 
+  ggplot(aes(x = factor(treatment), y = n, color = factor(treatment))) +
+  geom_violin(fill = NA) +
+  geom_jitter(height = 0) +
+  scale_color_viridis_d(option = "C", end = 0.9) +
+  theme(legend.position = "none") +
+  labs(x = "Group size", y = "Number of fish that never ate") +
+  facet_grid(rows = vars(`Type of Resampling`))
+```
+
+## Plateau Plots
+
+Here we present plots of the raw data for each assay, in the form of plateau plots, which are essentially reversed survival plots. On the x-axis, we have time during the trial, and on the y-axis, the cumulative number of fish that have moved. The lines have a stepwise fashion, similar to survival plots, and once all fish in a group have moved, the endpoint is denoted with a circle. Trials where one or more fish never move will have a line trailing off to the far right of the plot, leveling off at the number of fish that moved during the trial.
+
+### Predator Cue
+
+```{r}
+data <- latency_pred_cue %>%
+  mutate(latency = case_when(
+    latency == 0 ~ 400,
+    TRUE ~ latency
+  )) %>% 
+  filter(!is.na(latency)) %>% 
+  group_by(group_ID, trial, treatment) %>% 
+  arrange(latency) %>% 
+  mutate(order = rank(latency, ties.method = "first")) %>% 
+  arrange(desc(treatment), group_ID, desc(order)) %>% 
+  ungroup() %>% 
+  group_by(group_ID, trial, latency, treatment) %>% 
+  tally() %>% 
+  ungroup() %>% 
+  group_by(group_ID, trial, treatment) %>% 
+  arrange(latency) %>% 
+  mutate(cumu_n = cumsum(n)) %>% 
+  arrange(desc(treatment), group_ID, trial, latency) %>% 
+  select(-n) %>% 
+  ungroup()
+
+starts <- data %>%
+  distinct(trial, group_ID, treatment) %>% 
+  mutate(latency = 0, cumu_n = 0)
+
+ends <- data %>% 
+  group_by(treatment, group_ID, trial) %>% 
+  top_n(n = 1, wt = cumu_n) %>% 
+  ungroup() %>% 
+  mutate(treatment = factor(treatment, ordered = T, levels = c(2,4,8)),
+         trial = factor(trial, ordered = T, levels = 1:3))
+
+# regular x scale
+data2 <- bind_rows(data, starts) %>% 
+  arrange(group_ID, trial, cumu_n) %>% 
+  mutate(treatment = factor(treatment, ordered = T, levels = c(2,4,8)),
+         trial = factor(trial, ordered = T, levels = 1:3))
+
+ggplot() +
+  geom_step(data = data2, alpha = 0.4, direction = "hv", aes(x = latency, y = cumu_n, color = trial, group = interaction(group_ID, trial))) +
+  geom_point(data = ends, alpha = 0.4, aes(x = latency, y = cumu_n, color = trial, 
+                                           group = interaction(group_ID, trial))) +
+  facet_grid(trial~treatment, labeller = labeller(
+    trial = c(`1` = "Trial 1", `2` = "Trial 2", `3` = "Trial 3"),
+    treatment = c(`2` = "Groups of 2", `4` = "Groups of 4", `8` = "Groups of 8")
+  )) +
+  ylab("# of Fish That Have Resumed Normal Movement") +
+  xlab("Trial Time (s)") +
+  theme(legend.position = "none") +
+  theme(panel.background = element_rect(fill = NA, color = "gray80"), panel.spacing = unit(0, "mm")) +
+  coord_cartesian(xlim = c(0,300))
+```
+
+### Known Food
+
+```{r}
+data <- latency_typical_food %>%
+  filter(!is.na(latency)) %>% 
+  mutate(latency = case_when(
+    latency == 0 ~ 400,
+    TRUE ~ latency
+  )) %>% 
+  group_by(group_ID, trial, treatment) %>% 
+  arrange(latency) %>% 
+  mutate(order = rank(latency, ties.method = "first")) %>% 
+  arrange(desc(treatment), group_ID, desc(order)) %>% 
+  ungroup() %>% 
+  group_by(group_ID, trial, latency, treatment) %>% 
+  tally() %>% 
+  ungroup() %>% 
+  group_by(group_ID, trial, treatment) %>% 
+  arrange(latency) %>% 
+  mutate(cumu_n = cumsum(n)) %>% 
+  arrange(desc(treatment), group_ID, trial, latency) %>% 
+  select(-n) %>% 
+  ungroup()
+
+starts <- data %>%
+  distinct(trial, group_ID, treatment) %>% 
+  mutate(latency = 0, cumu_n = 0)
+
+ends <- data %>% 
+  group_by(treatment, group_ID, trial) %>% 
+  top_n(n = 1, wt = cumu_n) %>% 
+  ungroup() %>% 
+  mutate(treatment = factor(treatment, ordered = T, levels = c(2,4,8)),
+         trial = factor(trial, ordered = T, levels = 1:3))
+
+# regular x scale
+data2 <- bind_rows(data, starts) %>% 
+  arrange(group_ID, trial, cumu_n) %>% 
+  mutate(treatment = factor(treatment, ordered = T, levels = c(2,4,8)),
+         trial = factor(trial, ordered = T, levels = 1:3))
+
+ggplot() +
+  geom_step(data = data2, alpha = 0.4, direction = "hv", aes(x = latency, y = cumu_n, color = trial, group = interaction(group_ID, trial))) +
+  geom_point(data = ends, alpha = 0.4, aes(x = latency, y = cumu_n, color = trial, 
+                                           group = interaction(group_ID, trial))) +
+  facet_grid(trial~treatment, labeller = labeller(
+    trial = c(`1` = "Trial 1", `2` = "Trial 2", `3` = "Trial 3"),
+    treatment = c(`2` = "Groups of 2", `4` = "Groups of 4", `8` = "Groups of 8")
+  )) +
+  ylab("# of Fish That Have Eaten") +
+  xlab("Trial Time (s)") +
+  theme(legend.position = "none") +
+  theme(panel.background = element_rect(fill = NA, color = "gray80"), panel.spacing = unit(0, "mm")) +
+  coord_cartesian(xlim = c(0,300))
+```
+
+### Novel Food
+
+```{r}
+data <- latency_novel_food %>%
+  filter(!is.na(latency)) %>% 
+  mutate(latency = case_when(
+    latency == 0 ~ 400,
+    TRUE ~ latency
+  )) %>% 
+  group_by(group_ID, trial, treatment) %>% 
+  arrange(latency) %>% 
+  mutate(order = rank(latency, ties.method = "first")) %>% 
+  arrange(desc(treatment), group_ID, desc(order)) %>% 
+  ungroup() %>% 
+  group_by(group_ID, trial, latency, treatment) %>% 
+  tally() %>% 
+  ungroup() %>% 
+  group_by(group_ID, trial, treatment) %>% 
+  arrange(latency) %>% 
+  mutate(cumu_n = cumsum(n)) %>% 
+  arrange(desc(treatment), group_ID, trial, latency) %>% 
+  select(-n) %>% 
+  ungroup()
+
+starts <- data %>%
+  distinct(trial, group_ID, treatment) %>% 
+  mutate(latency = 0, cumu_n = 0)
+
+ends <- data %>% 
+  group_by(treatment, group_ID, trial) %>% 
+  top_n(n = 1, wt = cumu_n) %>% 
+  ungroup() %>% 
+  mutate(treatment = factor(treatment, ordered = T, levels = c(2,4,8)),
+         trial = factor(trial, ordered = T, levels = 1:3))
+
+# regular x scale
+data2 <- bind_rows(data, starts) %>% 
+  arrange(group_ID, trial, cumu_n) %>% 
+  mutate(treatment = factor(treatment, ordered = T, levels = c(2,4,8)),
+         trial = factor(trial, ordered = T, levels = 1:3))
+
+ggplot() +
+  geom_step(data = data2, alpha = 0.4, direction = "hv", aes(x = latency, y = cumu_n, color = trial, group = interaction(group_ID, trial))) +
+  geom_point(data = ends, alpha = 0.4, aes(x = latency, y = cumu_n, color = trial, 
+                                           group = interaction(group_ID, trial))) +
+  facet_grid(trial~treatment, labeller = labeller(
+    trial = c(`1` = "Trial 1", `2` = "Trial 2", `3` = "Trial 3"),
+    treatment = c(`2` = "Groups of 2", `4` = "Groups of 4", `8` = "Groups of 8")
+  )) +
+  ylab("# of Fish That Have Eaten") +
+  xlab("Trial Time (s)") +
+  theme(legend.position = "none") +
+  theme(panel.background = element_rect(fill = NA, color = "gray80"), panel.spacing = unit(0, "mm")) +
+  coord_cartesian(xlim = c(0,300))
+```
+
+<!-- ## First and Last per Group -->
+
+<!-- ### Pred Cue -->
+
+<!-- #### Real Data -->
+<!-- ```{r} -->
+<!-- latency_pred_cue %>%  -->
+<!--   filter(latency > 0) %>%  -->
+<!--   group_by(group_ID, treatment, trial) %>%  -->
+<!--   top_n(n = -1, wt = latency) %>%  -->
+<!--   ggplot(aes(x = factor(treatment), y = latency)) + -->
+<!--   geom_violin(fill = NA) + -->
+<!--   geom_jitter(aes(color = factor(trial)), alpha = 0.5) + -->
+<!--   ylab("latency of fastest individual per group") + -->
+<!--   xlab("Group size") + -->
+<!--   scale_color_viridis_d("Trial") -->
+
+<!-- latency_pred_cue %>%  -->
+<!--   filter(latency > 0) %>%  -->
+<!--   group_by(group_ID, treatment, trial) %>%  -->
+<!--   top_n(n = 1, wt = latency) %>%  -->
+<!--   ggplot(aes(x = factor(treatment), y = latency)) + -->
+<!--   geom_violin(fill = NA) + -->
+<!--   geom_jitter(aes(color = factor(trial)), alpha = 0.5) + -->
+<!--   ylab("latency of slowest individual per group") + -->
+<!--   xlab("Group size") + -->
+<!--   scale_color_viridis_d("Trial") -->
+<!-- ``` -->
+
+<!-- #### Fake Data -->
+<!-- ```{r} -->
+<!-- d <- tibble(group_id = 1:3000, -->
+<!--        treatment = rep(c(2,4,8), 1000)) %>%  -->
+<!--   rowwise() %>%  -->
+<!--   mutate(fish = list(seq(from = 1, by = 1, length.out = treatment))) %>%  -->
+<!--   unnest(fish) %>%  -->
+<!--   ungroup() %>%  -->
+<!--   mutate(latency = sample(x = latency_pred_cue %>%  -->
+<!--                             filter(!is.na(latency)) %>%  -->
+<!--                             .$latency, size=14000, replace = T)) -->
+
+<!-- d %>%  -->
+<!--   filter(latency > 0) %>%  -->
+<!--   group_by(group_id, treatment) %>%  -->
+<!--   top_n(n = -1, wt = latency) %>%  -->
+<!--   ggplot(aes(x = factor(treatment), y = latency)) + -->
+<!--   geom_violin(fill = NA) + -->
+<!--   geom_jitter(alpha = 0.1) + -->
+<!--   ylab("latency of fastest individual per group") + -->
+<!--   xlab("Group size") + -->
+<!--   scale_color_viridis_d("Trial") -->
+
+<!-- d %>%  -->
+<!--   filter(latency > 0) %>%  -->
+<!--   group_by(group_id, treatment) %>%  -->
+<!--   top_n(n = 1, wt = latency) %>%  -->
+<!--   ggplot(aes(x = factor(treatment), y = latency)) + -->
+<!--   geom_violin(fill = NA) + -->
+<!--   geom_jitter(alpha = 0.1) + -->
+<!--   ylab("latency of slowest individual per group") + -->
+<!--   xlab("Group size") + -->
+<!--   scale_color_viridis_d("Trial") -->
+
+<!-- d %>%  -->
+<!--   ggplot(aes(x = latency, color = factor(treatment), group = factor(treatment))) + -->
+<!--   geom_density() + -->
+<!--   scale_x_log10() + -->
+<!--   scale_color_viridis_d() + -->
+<!--   labs(color = "Group\nsize") -->
+<!-- ``` -->
+
+
+<!-- ### Known Food -->
+
+<!-- #### Real Data -->
+<!-- ```{r} -->
+<!-- latency_typical_food %>%  -->
+<!--   filter(latency > 0) %>%  -->
+<!--   group_by(group_ID, treatment, trial) %>%  -->
+<!--   top_n(n = -1, wt = latency) %>%  -->
+<!--   ggplot(aes(x = factor(treatment), y = latency)) + -->
+<!--   geom_violin(fill = NA) + -->
+<!--   geom_jitter(aes(color = factor(trial)), alpha = 0.5) + -->
+<!--   ylab("latency of fastest individual per group") + -->
+<!--   xlab("Group size") + -->
+<!--   scale_color_viridis_d("Trial") -->
+
+<!-- latency_typical_food %>%  -->
+<!--   filter(latency > 0) %>%  -->
+<!--   group_by(group_ID, treatment, trial) %>%  -->
+<!--   top_n(n = 1, wt = latency) %>%  -->
+<!--   ggplot(aes(x = factor(treatment), y = latency)) + -->
+<!--   geom_violin(fill = NA) + -->
+<!--   geom_jitter(aes(color = factor(trial)), alpha = 0.5) + -->
+<!--   ylab("latency of slowest individual per group") + -->
+<!--   xlab("Group size") + -->
+<!--   scale_color_viridis_d("Trial") -->
+<!-- ``` -->
+
+<!-- #### Fake Data -->
+<!-- ```{r} -->
+<!-- d <- tibble(group_id = 1:3000, -->
+<!--        treatment = rep(c(2,4,8), 1000)) %>%  -->
+<!--   rowwise() %>%  -->
+<!--   mutate(fish = list(seq(from = 1, by = 1, length.out = treatment))) %>%  -->
+<!--   unnest(fish) %>%  -->
+<!--   ungroup() %>%  -->
+<!--   mutate(latency = sample(x = latency_typical_food %>%  -->
+<!--                             filter(!is.na(latency)) %>%  -->
+<!--                             .$latency, size=14000, replace = T)) -->
+
+<!-- d %>%  -->
+<!--   filter(latency > 0) %>%  -->
+<!--   group_by(group_id, treatment) %>%  -->
+<!--   top_n(n = -1, wt = latency) %>%  -->
+<!--   ggplot(aes(x = factor(treatment), y = latency)) + -->
+<!--   geom_violin(fill = NA) + -->
+<!--   geom_jitter(alpha = 0.1) + -->
+<!--   ylab("latency of fastest individual per group") + -->
+<!--   xlab("Group size") + -->
+<!--   scale_color_viridis_d("Trial") -->
+
+<!-- d %>%  -->
+<!--   filter(latency > 0) %>%  -->
+<!--   group_by(group_id, treatment) %>%  -->
+<!--   top_n(n = 1, wt = latency) %>%  -->
+<!--   ggplot(aes(x = factor(treatment), y = latency)) + -->
+<!--   geom_violin(fill = NA) + -->
+<!--   geom_jitter(alpha = 0.1) + -->
+<!--   ylab("latency of slowest individual per group") + -->
+<!--   xlab("Group size") + -->
+<!--   scale_color_viridis_d("Trial") -->
+
+<!-- d %>%  -->
+<!--   ggplot(aes(x = latency, color = factor(treatment), group = factor(treatment))) + -->
+<!--   geom_density() + -->
+<!--   scale_x_log10() + -->
+<!--   scale_color_viridis_d() + -->
+<!--   labs(color = "Group\nsize") -->
+<!-- ``` -->
+
+<!-- ### Novel Food -->
+
+<!-- #### Real Data -->
+<!-- ```{r} -->
+<!-- latency_novel_food %>%  -->
+<!--   filter(latency > 0) %>%  -->
+<!--   group_by(group_ID, treatment, trial) %>%  -->
+<!--   top_n(n = -1, wt = latency) %>%  -->
+<!--   ggplot(aes(x = factor(treatment), y = latency)) + -->
+<!--   geom_violin(fill = NA) + -->
+<!--   geom_jitter(aes(color = factor(trial)), alpha = 0.5) + -->
+<!--   ylab("latency of fastest individual per group") + -->
+<!--   xlab("Group size") + -->
+<!--   scale_color_viridis_d("Trial") -->
+
+<!-- latency_novel_food %>%  -->
+<!--   filter(latency > 0) %>%  -->
+<!--   group_by(group_ID, treatment, trial) %>%  -->
+<!--   top_n(n = 1, wt = latency) %>%  -->
+<!--   ggplot(aes(x = factor(treatment), y = latency)) + -->
+<!--   geom_violin(fill = NA) + -->
+<!--   geom_jitter(aes(color = factor(trial)), alpha = 0.5) + -->
+<!--   ylab("latency of slowest individual per group") + -->
+<!--   xlab("Group size") + -->
+<!--   scale_color_viridis_d("Trial") -->
+<!-- ``` -->
+
+<!-- #### Fake Data -->
+<!-- ```{r} -->
+<!-- d <- tibble(group_id = 1:3000, -->
+<!--        treatment = rep(c(2,4,8), 1000)) %>%  -->
+<!--   rowwise() %>%  -->
+<!--   mutate(fish = list(seq(from = 1, by = 1, length.out = treatment))) %>%  -->
+<!--   unnest(fish) %>%  -->
+<!--   ungroup() %>%  -->
+<!--   mutate(latency = sample(x = latency_novel_food %>%  -->
+<!--                             filter(!is.na(latency)) %>%  -->
+<!--                             .$latency, size=14000, replace = T)) -->
+
+<!-- d %>%  -->
+<!--   filter(latency > 0) %>%  -->
+<!--   group_by(group_id, treatment) %>%  -->
+<!--   top_n(n = -1, wt = latency) %>%  -->
+<!--   ggplot(aes(x = factor(treatment), y = latency)) + -->
+<!--   geom_violin(fill = NA) + -->
+<!--   geom_jitter(alpha = 0.1) + -->
+<!--   ylab("latency of fastest individual per group") + -->
+<!--   xlab("Group size") + -->
+<!--   scale_color_viridis_d("Trial") -->
+
+<!-- d %>%  -->
+<!--   filter(latency > 0) %>%  -->
+<!--   group_by(group_id, treatment) %>%  -->
+<!--   top_n(n = 1, wt = latency) %>%  -->
+<!--   ggplot(aes(x = factor(treatment), y = latency)) + -->
+<!--   geom_violin(fill = NA) + -->
+<!--   geom_jitter(alpha = 0.1) + -->
+<!--   ylab("latency of slowest individual per group") + -->
+<!--   xlab("Group size") + -->
+<!--   scale_color_viridis_d("Trial") -->
+
+<!-- d %>%  -->
+<!--   ggplot(aes(x = latency, color = factor(treatment), group = factor(treatment))) + -->
+<!--   geom_density() + -->
+<!--   scale_x_log10() + -->
+<!--   scale_color_viridis_d() + -->
+<!--   labs(color = "Group\nsize") -->
+<!-- ``` -->
+
+
+## ICC Description
+
+The intraclass correlation coefficient (ICC) is a statistic used to describe the proportion of variance in a hierarchical model due to the grouping (random) effects. An ICC value of 0 means that the grouping variable gives no information, all of the variance is due to between-individual differences and not between-group differences. An ICC value of 1 means that all variation is due to the grouping variable, and all observations within a group are identical. In a frequentist framework, the ICC is calculated using the delta method, which involves an algebraic decomposition of the variance into discrete terms for the random and fixed effects.
+
+In a Bayesian context, there is a comparable statistic referred to as the Bayesian variance ratio, or simply variance ratio. It is conceptually similar to the ICC, describing the proportion of variance due to grouping effects, but it is calculated somewhat differently. Rather than an algebraic decomposition of variance, we can utilize the posterior parameter distribution to generate predicted outcome values and calculate a variance ratio based on these outcomes. For every sample from the posterior parameter distribution, we generate an estimated outcome value for every row in the original data used to fit the model. If there were 1000 rows in the data and 5000 samples in the posterior distribution, we end up with a matrix of 1000 x 5000 predicted outcomes. We then calculate the variance of each set of 1000 predicted outcomes, yielding 5000 variance values, one for each posterior sample. This is similar to the method used to calculate a Bayesian R2 metric (Gelman R2 paper).
+
+In order to calculate the variance ratio, we carry out this process twice. First, we generate predictions conditional on random effects, which is to say we are considering every source of variation captured in our model. Next, we generate predictions unconditional on random effects, which is to say we are ignoring any variation that comes from the random effects. We now have 2 vectors of variance estimates, each of them containing estimates from every posterior distribution sample. We then take the ratio of variance unconditional on random effects / variance conditional on random effects. This yield a vector of ratios representing the proportion of variance due to sources other than random effects. In order to get the proportion of variance due to random effects, we subtract this vector from 1. Finally, we have a vector of Bayesian variance ratios, corresponding to samples from the posterior distribution. This gives us the benefit of including uncertainty in our variance ratio estimates, just as we can do with any Bayesian calculations derived from the posterior distribution.
+
+If between-group differences are high, then a larger portion of the total variance in the data will be due to between-group effects, and less will be due to within-group effects. This would mean that variance from posterior predictive draws will be smaller when only within-group variation is taken into account, and higher when both within-group and between-group variation are taken into account. This will yield a variance ratio closer to 1, as more of the total variance is due to group-level effects. However, if most of the variance is due to within-group effects and there is little between-group variation, then the variance of predicted draws will be very similar whether group-level variation is taken into account or not. In this case, the distributions of predicted variance will be very similar between conditional and unconditional estimates.
+
+Another benefit of the method using posterior predictions is that the variance ratio can be calculated while considering multiple random effects. For example, we frequently fit models using both group ID and tank as random intercepts, but we are only interested in the variance ratios for group ID. Fitting random intercepts by tank is simply to capture any variation introduced by subtle differences in the tanks. When we calculate the variance ratio for group ID, what we really want to know is how much of the variance is due to group ID, once we have taken everything else into account. That means that rather than calculating 1- (variance conditional on no random effects / variance conditional on group ID), we want to calculate 1 – (variance conditional on tank only / variance conditional on group ID and tank). The actual measurement we care about is how much information we can get from knowing group ID once we have already taken into account all other sources of variation, including other random effects such as tank. All variance ratio estimates presented in the manuscript use this approach.
+
+Sometimes, when the conditional and unconditional estimates are very similar, or they both vary widely, some unconditional variance estimates will be higher than the conditional variance estimates. In other words, while the numerator variance (which ignores a source of variance) is usually smaller than the denominator variance (which accounts for all sources of variation), the stochastic nature of generating predicted outcomes may yield a numerator larger than the denominator. Then, when we subtract these values to 1 to get our Bayesian variance ratio, those estimates will have a negative value. Conceptually, a negative proportion makes no sense, but it is simply a byproduct of this method of calculation. It could be considered further evidence for a variance ratio of 0, since the two values are so similar that either one could be higher than the other. In fact, if the group-level variance is actually 0, meaning the grouping variable tells you nothing, then we'd actually expect a distribution of Bayesian variance ratio estimates centered around 0, but with about half of the density below 0. Again, these negative values are not representing negative proportions, but rather that across two vectors of variance estimates generated in the same way, each value has a 50% chance of being larger than its counterpart in the other vector.
+
+In FIG X, we can see a visual representation of the process of calculating the Bayesian variance ratio. In the first panel, we see variance estimates derived from posterior predictions from the first 100 samples from the posterior, unconditional on random effects. The second panel is similar, but the predictions are conditional on random effects, meaning they capture an additional source of variance. Notice that the y-axis scales differ between these two. Most of the time, the bars in the second panel are larger than the corresponding bars in the first panel, but the cases where it is the opposite are colored in red. For panel 3, we divide each bar from panel 1 by its corresponding bar in panel 2. The cases marked in red now yield values greater than 1, hitting the dashed line. These values correspond to the proportion of variance due to everything other than the random effects. Finally, to get our 4th panel, the Bayesian variance ratio, we subtract each value in panel 3 from 1. The red bars now correspond to negative values for the Bayesian variance ratio. In panel 5, we have a histogram of all 10000 variance ratio estimates, and we see that the tail in red extends below 0.
+
+
+```{r}
+model <- read_rds("other_models/fit_models/mean_group_lat_all_assays_noncentered_fitted.rds")
+re_formula <- NULL
+robust <- T
+ci <- 0.95
+
+PPD <- brms::posterior_predict(model, re_formula = re_formula, 
+                               summary = FALSE)
+var_total <- apply(PPD, MARGIN = 1, FUN = stats::var)
+
+PPD_0 <- brms::posterior_predict(model, re_formula = NA, 
+                                 summary = FALSE)
+var_rand_intercept <- apply(PPD_0, MARGIN = 1, FUN = stats::var)
+
+var_icc <- var_rand_intercept/var_total
+```
+
+```{r}
+var_total <- var_total %>% 
+  data.frame(var = .) %>% 
+  rowid_to_column()
+
+var_rand_intercept <- var_rand_intercept %>% 
+  data.frame(var = .) %>% 
+  rowid_to_column()
+
+var_icc <- var_icc %>% 
+  data.frame(var = .) %>% 
+  rowid_to_column()
+
+highlight_rows <- var_icc %>% 
+  filter(var > 1) %>% 
+  .$rowid
+
+pvt_raw <- var_total %>% 
+  filter(rowid <= 100) %>% 
+  ggplot(aes(x = rowid, y = var)) +
+  geom_col(aes(fill = rowid %in% highlight_rows)) +
+  scale_fill_manual(values = c("grey40", "red")) +
+  theme(legend.position = "none") +
+  xlab("First 100 variance estimates with random effects")
+
+pvri_raw <- var_rand_intercept %>% 
+  filter(rowid <= 100) %>% 
+  ggplot(aes(x = rowid, y = var)) +
+  geom_col(aes(fill = rowid %in% highlight_rows)) +
+  scale_fill_manual(values = c("grey40", "red")) +
+  theme(legend.position = "none") +
+  xlab("First 100 variance estimates without random effects")
+
+pvratio_raw <- var_icc %>% 
+  filter(rowid <= 100) %>% 
+  ggplot(aes(x = rowid, y = var)) +
+  geom_hline(yintercept = 1, linetype = 2, alpha = 0.3) +
+  geom_col(aes(fill = rowid %in% highlight_rows)) +
+  scale_fill_manual(values = c("grey40", "red")) +
+  theme(legend.position = "none") +
+  xlab("Each bar from panel 1 divided by the matching bar from panel 2") +
+  ylab("Ratio")
+
+pvicc_raw <- var_icc %>% 
+  filter(rowid <= 100) %>% 
+  ggplot(aes(x = rowid, y = 1 - var)) +
+  geom_col(aes(fill = rowid %in% highlight_rows)) +
+  scale_fill_manual(values = c("grey40", "red")) +
+  theme(legend.position = "none") +
+  xlab("1 - values from panel 3") +
+  ylab("Ratio")
+
+pvicc_raw_hist <- var_icc %>% 
+  ggplot(aes(x = 1 - var, fill = rowid %in% highlight_rows)) +
+  geom_histogram(bins = 100) +
+  scale_fill_manual(values = c("grey40", "red")) +
+  theme(legend.position = "none") +
+  xlab("Histogram of values from panel 4 (all 10000, not just first 100)") +
+  xlim(c(-1.5,1))
+
+p_raw <- pvri_raw / pvt_raw / pvratio_raw / pvicc_raw / pvicc_raw_hist
+
+p_raw
+```
+
